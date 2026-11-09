@@ -1,0 +1,25 @@
+# VS Code
+.vscode/
+*.code-workspace
+
+# macOS
+.DS_Store
+
+# Build artifacts
+target/
+*.class
+
+# Node / Sunlint
+node_modules/
+package-lock.json
+*.log
+report.html
+report.json
+sunlint-report.html
+impact-report.md
+.agent/
+AGENTS.md
+
+
+
+
