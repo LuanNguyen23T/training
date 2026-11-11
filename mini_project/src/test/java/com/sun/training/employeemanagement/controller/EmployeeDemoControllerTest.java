@@ -40,11 +40,11 @@ class EmployeeDemoControllerTest {
 
     @Test
     void testGenerateEmployeeCode() throws Exception {
-        when(utilityService.generateEmployeeCode()).thenReturn("EMP-00001");
+        when(utilityService.generateEmployeeCode()).thenReturn("N0001");
 
         mockMvc.perform(get("/api/v1/demo/generate-code"))
                 .andExpect(status().isOk())
-                .andExpect(content().string("EMP-00001"));
+                .andExpect(content().string("N0001"));
     }
 
     @Test
@@ -68,7 +68,7 @@ class EmployeeDemoControllerTest {
                 """;
 
         EmployeeResponseDto response = new EmployeeResponseDto(
-                "EMP-00001",
+                "N0001",
                 "Nguyen Van A",
                 "nguyenvana@sun-asterisk.com",
                 "Engineering"
@@ -80,7 +80,7 @@ class EmployeeDemoControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.employeeCode").value("EMP-00001"))
+                .andExpect(jsonPath("$.employeeCode").value("N0001"))
                 .andExpect(jsonPath("$.fullName").value("Nguyen Van A"))
                 .andExpect(jsonPath("$.email").value("nguyenvana@sun-asterisk.com"))
                 .andExpect(jsonPath("$.department").value("Engineering"));
