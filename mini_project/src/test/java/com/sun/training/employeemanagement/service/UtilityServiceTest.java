@@ -41,10 +41,10 @@ class UtilityServiceTest {
 
         assertNotNull(code1);
         assertNotNull(code2);
-        assertTrue(code1.startsWith("EMP-"));
-        assertTrue(code2.startsWith("EMP-"));
-        assertEquals("EMP-00001", code1);
-        assertEquals("EMP-00002", code2);
+        assertTrue(code1.startsWith("N"));
+        assertTrue(code2.startsWith("N"));
+        assertEquals("N0001", code1);
+        assertEquals("N0002", code2);
     }
 }
 

@@ -38,13 +38,13 @@ public class UtilityService {
     }
 
     /**
-     * Generates a unique sequential employee code in format EMP-XXXXX.
+     * Generates a unique sequential employee code in format NXXXX (e.g., N0001).
      *
      * @return formatted employee code
      */
     public String generateEmployeeCode() {
         long currentSequence = employeeCodeCounter.getAndIncrement();
-        String code = String.format(Locale.ROOT, "EMP-%05d", currentSequence);
+        String code = String.format(Locale.ROOT, "N%04d", currentSequence);
         LOGGER.info("Generated employee code: {}", code);
         return code;
     }
