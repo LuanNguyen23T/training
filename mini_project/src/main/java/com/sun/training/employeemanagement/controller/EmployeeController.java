@@ -8,8 +8,8 @@ import java.net.URI;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * REST Controller providing complete CRUD and search APIs for Employee management.
+ * REST Controller providing complete CRUD and search APIs for Employee management with validation.
  */
 @RestController
 @RequestMapping("/api/v1/employees")
@@ -60,14 +60,13 @@ public class EmployeeController {
      * API to retrieve an employee by employee code via Path Variable (e.g. N0001).
      *
      * @param employeeCode unique employee code
-     * @return response entity with employee or 404 NOT FOUND
+     * @return response entity with employee (throws ResourceNotFoundException if not found)
      */
     @GetMapping("/{employeeCode}")
     public ResponseEntity<EmployeeResponseDto> getEmployeeByCode(@PathVariable String employeeCode) {
         LOGGER.info("GET /api/v1/employees/{} requested", employeeCode);
-        return employeeService.getEmployeeByCode(employeeCode)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+        EmployeeResponseDto employee = employeeService.getEmployeeByCode(employeeCode);
+        return ResponseEntity.ok(employee);
     }
 
     /**
@@ -97,7 +96,7 @@ public class EmployeeController {
     }
 
     /**
-     * API to create a new employee persisted to the database.
+     * API to create a new employee persisted to the database with Bean Validation.
      *
      * @param requestDto validated employee request payload
      * @return response entity with created employee and status 201 CREATED
@@ -112,35 +111,53 @@ public class EmployeeController {
     }
 
     /**
+     * API demonstrating explicit @Valid and BindingResult validation handling (Module 5).
+     *
+     * @param requestDto validated request body
+     * @param bindingResult binding result containing validation errors if any
+     * @return response entity with created employee or 400 Bad Request with field errors
+     */
+    @PostMapping("/validate-demo")
+    public ResponseEntity<?> createEmployeeWithBindingResult(
+            @Valid @RequestBody EmployeeRequestDto requestDto,
+            BindingResult bindingResult) {
+        LOGGER.info("POST /api/v1/employees/validate-demo requested");
+        if (bindingResult.hasErrors()) {
+            List<String> errors = bindingResult.getFieldErrors().stream()
+                    .map(err -> err.getField() + ": " + err.getDefaultMessage())
+                    .toList();
+            return ResponseEntity.badRequest().body(errors);
+        }
+        EmployeeResponseDto created = employeeService.createEmployee(requestDto);
+        return ResponseEntity.ok(created);
+    }
+
+    /**
      * API to update an existing employee by employee code.
      *
      * @param employeeCode unique employee code
      * @param requestDto updated employee information
-     * @return response entity with updated employee or 404 NOT FOUND
+     * @return response entity with updated employee
      */
     @PutMapping("/{employeeCode}")
     public ResponseEntity<EmployeeResponseDto> updateEmployee(
             @PathVariable String employeeCode,
             @Valid @RequestBody EmployeeRequestDto requestDto) {
         LOGGER.info("PUT /api/v1/employees/{} requested", employeeCode);
-        return employeeService.updateEmployee(employeeCode, requestDto)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+        EmployeeResponseDto updated = employeeService.updateEmployee(employeeCode, requestDto);
+        return ResponseEntity.ok(updated);
     }
 
     /**
      * API to delete an employee by employee code.
      *
      * @param employeeCode unique employee code
-     * @return 204 NO CONTENT on success or 404 NOT FOUND if employee does not exist
+     * @return 204 NO CONTENT on success
      */
     @DeleteMapping("/{employeeCode}")
     public ResponseEntity<Void> deleteEmployee(@PathVariable String employeeCode) {
         LOGGER.info("DELETE /api/v1/employees/{} requested", employeeCode);
-        boolean deleted = employeeService.deleteEmployee(employeeCode);
-        if (deleted) {
-            return ResponseEntity.noContent().build();
-        }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        employeeService.deleteEmployee(employeeCode);
+        return ResponseEntity.noContent().build();
     }
 }

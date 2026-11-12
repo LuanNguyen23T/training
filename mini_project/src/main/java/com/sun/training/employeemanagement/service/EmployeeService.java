@@ -5,10 +5,11 @@ import com.sun.training.employeemanagement.dto.EmployeeRequestDto;
 import com.sun.training.employeemanagement.dto.EmployeeResponseDto;
 import com.sun.training.employeemanagement.entity.Department;
 import com.sun.training.employeemanagement.entity.Employee;
+import com.sun.training.employeemanagement.exception.DuplicateResourceException;
+import com.sun.training.employeemanagement.exception.ResourceNotFoundException;
 import com.sun.training.employeemanagement.repository.DepartmentRepository;
 import com.sun.training.employeemanagement.repository.EmployeeRepository;
 import java.util.List;
-import java.util.Optional;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service managing employee operations with Spring Data JPA database persistence.
+ * Service managing employee operations with Spring Data JPA database persistence and exception handling.
  */
 @Service
 @Transactional(readOnly = true)
@@ -67,15 +68,15 @@ public class EmployeeService {
      * Retrieves an employee by employee code (e.g., N0001).
      *
      * @param employeeCode unique employee code
-     * @return optional containing EmployeeResponseDto if found
+     * @return EmployeeResponseDto
+     * @throws ResourceNotFoundException if no employee is found with given code
      */
-    public Optional<EmployeeResponseDto> getEmployeeByCode(String employeeCode) {
+    public EmployeeResponseDto getEmployeeByCode(String employeeCode) {
         LOGGER.info("Finding employee by code: {}", employeeCode);
-        if (employeeCode == null || employeeCode.isBlank()) {
-            return Optional.empty();
-        }
         return employeeRepository.findByEmployeeCode(employeeCode.trim())
-                .map(this::toResponseDto);
+                .map(this::toResponseDto)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format("Employee with code '%s' not found", employeeCode)));
     }
 
     /**
@@ -117,13 +118,15 @@ public class EmployeeService {
      *
      * @param requestDto request payload containing new employee information
      * @return newly created employee response DTO
+     * @throws DuplicateResourceException if an employee with the same email already exists
      */
     @Transactional
     public EmployeeResponseDto createEmployee(EmployeeRequestDto requestDto) {
         LOGGER.info("Creating new employee with email: {}", requestDto.getEmail());
 
         if (employeeRepository.existsByEmail(requestDto.getEmail())) {
-            throw new IllegalArgumentException("Email already exists: " + requestDto.getEmail());
+            throw new DuplicateResourceException(
+                    String.format("Employee with email '%s' already exists", requestDto.getEmail()));
         }
 
         String formattedName = utilityService.formatFullName(requestDto.getFullName());
@@ -142,23 +145,23 @@ public class EmployeeService {
      *
      * @param employeeCode code of employee to update
      * @param requestDto updated employee details
-     * @return optional containing updated EmployeeResponseDto, or empty if not found
+     * @return updated EmployeeResponseDto
+     * @throws ResourceNotFoundException if no employee is found with given code
+     * @throws DuplicateResourceException if updated email already belongs to another employee
      */
     @Transactional
-    public Optional<EmployeeResponseDto> updateEmployee(String employeeCode, EmployeeRequestDto requestDto) {
+    public EmployeeResponseDto updateEmployee(String employeeCode, EmployeeRequestDto requestDto) {
         LOGGER.info("Updating employee with code: {}", employeeCode);
 
-        Optional<Employee> existingOpt = employeeRepository.findByEmployeeCode(employeeCode);
-        if (existingOpt.isEmpty()) {
-            return Optional.empty();
-        }
-
-        Employee employee = existingOpt.get();
+        Employee employee = employeeRepository.findByEmployeeCode(employeeCode)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format("Employee with code '%s' not found", employeeCode)));
 
         // Check email uniqueness if email is changed
         if (!employee.getEmail().equalsIgnoreCase(requestDto.getEmail())
                 && employeeRepository.existsByEmail(requestDto.getEmail())) {
-            throw new IllegalArgumentException("Email already in use by another employee: " + requestDto.getEmail());
+            throw new DuplicateResourceException(
+                    String.format("Email '%s' is already in use by another employee", requestDto.getEmail()));
         }
 
         String formattedName = utilityService.formatFullName(requestDto.getFullName());
@@ -172,28 +175,25 @@ public class EmployeeService {
         Employee updated = employeeRepository.save(employee);
         LOGGER.info("Updated employee [code={}, name={}] successfully.", updated.getEmployeeCode(), updated.getName());
 
-        return Optional.of(toResponseDto(updated));
+        return toResponseDto(updated);
     }
 
     /**
      * Deletes an employee by employee code.
      *
      * @param employeeCode unique employee code
-     * @return true if deleted, false if not found
+     * @throws ResourceNotFoundException if employee with given code is not found
      */
     @Transactional
-    public boolean deleteEmployee(String employeeCode) {
+    public void deleteEmployee(String employeeCode) {
         LOGGER.info("Deleting employee with code: {}", employeeCode);
 
-        Optional<Employee> existingOpt = employeeRepository.findByEmployeeCode(employeeCode);
-        if (existingOpt.isEmpty()) {
-            LOGGER.warn("Employee with code: {} not found for deletion.", employeeCode);
-            return false;
-        }
+        Employee employee = employeeRepository.findByEmployeeCode(employeeCode)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        String.format("Employee with code '%s' not found", employeeCode)));
 
-        employeeRepository.delete(existingOpt.get());
+        employeeRepository.delete(employee);
         LOGGER.info("Employee with code: {} successfully deleted.", employeeCode);
-        return true;
     }
 
     /**

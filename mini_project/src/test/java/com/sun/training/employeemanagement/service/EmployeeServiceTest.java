@@ -1,10 +1,8 @@
 package com.sun.training.employeemanagement.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -16,6 +14,8 @@ import com.sun.training.employeemanagement.dto.EmployeeRequestDto;
 import com.sun.training.employeemanagement.dto.EmployeeResponseDto;
 import com.sun.training.employeemanagement.entity.Department;
 import com.sun.training.employeemanagement.entity.Employee;
+import com.sun.training.employeemanagement.exception.DuplicateResourceException;
+import com.sun.training.employeemanagement.exception.ResourceNotFoundException;
 import com.sun.training.employeemanagement.repository.DepartmentRepository;
 import com.sun.training.employeemanagement.repository.EmployeeRepository;
 import java.util.List;
@@ -107,20 +107,18 @@ class EmployeeServiceTest {
 
         when(employeeRepository.findByEmployeeCode("N0001")).thenReturn(Optional.of(emp));
 
-        Optional<EmployeeResponseDto> opt = employeeService.getEmployeeByCode("N0001");
+        EmployeeResponseDto result = employeeService.getEmployeeByCode("N0001");
 
-        assertTrue(opt.isPresent());
-        assertEquals("N0001", opt.get().getEmployeeCode());
-        assertEquals("Nguyen Huu Hoang Luan", opt.get().getFullName());
+        assertNotNull(result);
+        assertEquals("N0001", result.getEmployeeCode());
+        assertEquals("Nguyen Huu Hoang Luan", result.getFullName());
     }
 
     @Test
-    void testGetEmployeeByCode_notFound() {
+    void testGetEmployeeByCode_notFound_throwsResourceNotFoundException() {
         when(employeeRepository.findByEmployeeCode("NOT_EXIST")).thenReturn(Optional.empty());
 
-        Optional<EmployeeResponseDto> opt = employeeService.getEmployeeByCode("NOT_EXIST");
-
-        assertFalse(opt.isPresent());
+        assertThrows(ResourceNotFoundException.class, () -> employeeService.getEmployeeByCode("NOT_EXIST"));
     }
 
     @Test
@@ -154,7 +152,7 @@ class EmployeeServiceTest {
     }
 
     @Test
-    void testCreateEmployee_duplicateEmail_throwsException() {
+    void testCreateEmployee_duplicateEmail_throwsDuplicateResourceException() {
         EmployeeRequestDto request = new EmployeeRequestDto(
                 "Le Van Cuong",
                 "cuong.le@sun-asterisk.com",
@@ -164,7 +162,7 @@ class EmployeeServiceTest {
 
         when(employeeRepository.existsByEmail("cuong.le@sun-asterisk.com")).thenReturn(true);
 
-        assertThrows(IllegalArgumentException.class, () -> employeeService.createEmployee(request));
+        assertThrows(DuplicateResourceException.class, () -> employeeService.createEmployee(request));
         verify(employeeRepository, never()).save(any());
     }
 
@@ -186,16 +184,16 @@ class EmployeeServiceTest {
         when(departmentRepository.findByNameIgnoreCase("Engineering")).thenReturn(Optional.of(dept));
         when(employeeRepository.save(any(Employee.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        Optional<EmployeeResponseDto> updated = employeeService.updateEmployee("N0001", updateReq);
+        EmployeeResponseDto updated = employeeService.updateEmployee("N0001", updateReq);
 
-        assertTrue(updated.isPresent());
-        assertEquals("Nguyen Huu Hoang Luan", updated.get().getFullName());
-        assertEquals("luan.nguyen@sun-asterisk.com", updated.get().getEmail());
-        assertEquals(16000000.0, updated.get().getSalary());
+        assertNotNull(updated);
+        assertEquals("Nguyen Huu Hoang Luan", updated.getFullName());
+        assertEquals("luan.nguyen@sun-asterisk.com", updated.getEmail());
+        assertEquals(16000000.0, updated.getSalary());
     }
 
     @Test
-    void testUpdateEmployee_notFound() {
+    void testUpdateEmployee_notFound_throwsResourceNotFoundException() {
         EmployeeRequestDto updateReq = new EmployeeRequestDto(
                 "Nguyen Huu Hoang Luan",
                 "luan.nguyen@sun-asterisk.com",
@@ -205,8 +203,26 @@ class EmployeeServiceTest {
 
         when(employeeRepository.findByEmployeeCode("NOT_EXIST")).thenReturn(Optional.empty());
 
-        Optional<EmployeeResponseDto> updated = employeeService.updateEmployee("NOT_EXIST", updateReq);
-        assertFalse(updated.isPresent());
+        assertThrows(ResourceNotFoundException.class, () -> employeeService.updateEmployee("NOT_EXIST", updateReq));
+    }
+
+    @Test
+    void testUpdateEmployee_duplicateEmail_throwsDuplicateResourceException() {
+        Department dept = new Department("Engineering", "Tech");
+        Employee existing = new Employee("N0001", "Old Name", "old@sun-asterisk.com", 10000000.0, dept);
+
+        EmployeeRequestDto updateReq = new EmployeeRequestDto(
+                "Nguyen Huu Hoang Luan",
+                "different@sun-asterisk.com",
+                "Engineering",
+                16000000.0
+        );
+
+        when(employeeRepository.findByEmployeeCode("N0001")).thenReturn(Optional.of(existing));
+        when(employeeRepository.existsByEmail("different@sun-asterisk.com")).thenReturn(true);
+
+        assertThrows(DuplicateResourceException.class, () -> employeeService.updateEmployee("N0001", updateReq));
+        verify(employeeRepository, never()).save(any());
     }
 
     @Test
@@ -216,19 +232,16 @@ class EmployeeServiceTest {
 
         when(employeeRepository.findByEmployeeCode("N0001")).thenReturn(Optional.of(existing));
 
-        boolean deleted = employeeService.deleteEmployee("N0001");
+        employeeService.deleteEmployee("N0001");
 
-        assertTrue(deleted);
         verify(employeeRepository).delete(existing);
     }
 
     @Test
-    void testDeleteEmployee_notFound() {
+    void testDeleteEmployee_notFound_throwsResourceNotFoundException() {
         when(employeeRepository.findByEmployeeCode("NOT_EXIST")).thenReturn(Optional.empty());
 
-        boolean deleted = employeeService.deleteEmployee("NOT_EXIST");
-
-        assertFalse(deleted);
+        assertThrows(ResourceNotFoundException.class, () -> employeeService.deleteEmployee("NOT_EXIST"));
         verify(employeeRepository, never()).delete(any());
     }
 
