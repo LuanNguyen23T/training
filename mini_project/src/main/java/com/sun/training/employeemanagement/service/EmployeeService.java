@@ -3,55 +3,53 @@ package com.sun.training.employeemanagement.service;
 import com.sun.training.employeemanagement.dto.EmployeeRegistrationDto;
 import com.sun.training.employeemanagement.dto.EmployeeRequestDto;
 import com.sun.training.employeemanagement.dto.EmployeeResponseDto;
-import com.sun.training.employeemanagement.model.Employee;
-import jakarta.annotation.PostConstruct;
+import com.sun.training.employeemanagement.entity.Department;
+import com.sun.training.employeemanagement.entity.Employee;
+import com.sun.training.employeemanagement.repository.DepartmentRepository;
+import com.sun.training.employeemanagement.repository.EmployeeRepository;
 import java.util.List;
-import java.util.Locale;
 import java.util.Optional;
-import java.util.concurrent.CopyOnWriteArrayList;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Service managing employee operations and demonstrating IoC / DI injection with in-memory persistence.
+ * Service managing employee operations with Spring Data JPA database persistence.
  */
 @Service
+@Transactional(readOnly = true)
 public class EmployeeService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmployeeService.class);
 
+    private final EmployeeRepository employeeRepository;
+    private final DepartmentRepository departmentRepository;
     private final UtilityService utilityService;
     private final ModelMapper modelMapper;
 
-    private final List<Employee> inMemoryEmployees = new CopyOnWriteArrayList<>();
-
     /**
-     * Constructor injection for required dependencies.
+     * Constructor injection for repositories and utility services.
      *
-     * @param utilityService custom @Service bean
-     * @param modelMapper custom @Bean defined in @Configuration
+     * @param employeeRepository Spring Data JPA employee repository
+     * @param departmentRepository Spring Data JPA department repository
+     * @param utilityService custom UtilityService bean
+     * @param modelMapper custom ModelMapper bean
      */
-    public EmployeeService(UtilityService utilityService, ModelMapper modelMapper) {
+    public EmployeeService(
+            EmployeeRepository employeeRepository,
+            DepartmentRepository departmentRepository,
+            UtilityService utilityService,
+            ModelMapper modelMapper) {
+        this.employeeRepository = employeeRepository;
+        this.departmentRepository = departmentRepository;
         this.utilityService = utilityService;
         this.modelMapper = modelMapper;
     }
 
     /**
-     * Pre-populates sample in-memory employee data for testing in Module 3.
-     */
-    @PostConstruct
-    public void initSampleData() {
-        LOGGER.info("Initializing sample in-memory employee data...");
-        createEmployeeInternal("Nguyen Huu Hoang Luan", "luan.nguyen@sun-asterisk.com", "Engineering", 15000000.0);
-        createEmployeeInternal("Tran Thi Binh", "binh.tran@sun-asterisk.com", "Human Resources", 12000000.0);
-        createEmployeeInternal("Le Van Cuong", "cuong.le@sun-asterisk.com", "Finance", 14000000.0);
-        LOGGER.info("Sample in-memory employee data initialized with {} records.", inMemoryEmployees.size());
-    }
-
-    /**
-     * Retrieves all employees with optional filtering by department or search keyword.
+     * Retrieves all employees with optional filtering by department name or search keyword across fields.
      *
      * @param department optional department name filter
      * @param keyword optional search keyword across name, email, or employeeCode
@@ -59,16 +57,14 @@ public class EmployeeService {
      */
     public List<EmployeeResponseDto> getAllEmployees(String department, String keyword) {
         LOGGER.info("Fetching employees with filter - department: '{}', keyword: '{}'", department, keyword);
-
-        return inMemoryEmployees.stream()
-                .filter(emp -> matchesDepartment(emp, department))
-                .filter(emp -> matchesKeyword(emp, keyword))
-                .map(emp -> modelMapper.map(emp, EmployeeResponseDto.class))
+        return employeeRepository.searchEmployees(department, keyword)
+                .stream()
+                .map(this::toResponseDto)
                 .toList();
     }
 
     /**
-     * Retrieves an employee by employee code (e.g. N0001).
+     * Retrieves an employee by employee code (e.g., N0001).
      *
      * @param employeeCode unique employee code
      * @return optional containing EmployeeResponseDto if found
@@ -78,30 +74,126 @@ public class EmployeeService {
         if (employeeCode == null || employeeCode.isBlank()) {
             return Optional.empty();
         }
-        return inMemoryEmployees.stream()
-                .filter(emp -> emp.getEmployeeCode() != null
-                        && emp.getEmployeeCode().equalsIgnoreCase(employeeCode.trim()))
-                .findFirst()
-                .map(emp -> modelMapper.map(emp, EmployeeResponseDto.class));
+        return employeeRepository.findByEmployeeCode(employeeCode.trim())
+                .map(this::toResponseDto);
     }
 
     /**
-     * Creates and stores a new employee in-memory.
+     * Searches employees by name containing keyword.
+     *
+     * @param name keyword to search in employee name
+     * @return list of matching employees
+     */
+    public List<EmployeeResponseDto> searchEmployeesByName(String name) {
+        LOGGER.info("Searching employees by name containing: '{}'", name);
+        if (name == null || name.isBlank()) {
+            return getAllEmployees(null, null);
+        }
+        return employeeRepository.findByNameContainingIgnoreCase(name.trim())
+                .stream()
+                .map(this::toResponseDto)
+                .toList();
+    }
+
+    /**
+     * Searches employees by department name.
+     *
+     * @param departmentName name of the department
+     * @return list of matching employees
+     */
+    public List<EmployeeResponseDto> searchEmployeesByDepartment(String departmentName) {
+        LOGGER.info("Searching employees by department: '{}'", departmentName);
+        if (departmentName == null || departmentName.isBlank()) {
+            return getAllEmployees(null, null);
+        }
+        return employeeRepository.findByDepartmentNameIgnoreCase(departmentName.trim())
+                .stream()
+                .map(this::toResponseDto)
+                .toList();
+    }
+
+    /**
+     * Creates and persists a new employee in the database.
      *
      * @param requestDto request payload containing new employee information
      * @return newly created employee response DTO
      */
+    @Transactional
     public EmployeeResponseDto createEmployee(EmployeeRequestDto requestDto) {
         LOGGER.info("Creating new employee with email: {}", requestDto.getEmail());
 
-        Employee created = createEmployeeInternal(
-                requestDto.getFullName(),
-                requestDto.getEmail(),
-                requestDto.getDepartment(),
-                requestDto.getSalary()
-        );
+        if (employeeRepository.existsByEmail(requestDto.getEmail())) {
+            throw new IllegalArgumentException("Email already exists: " + requestDto.getEmail());
+        }
 
-        return modelMapper.map(created, EmployeeResponseDto.class);
+        String formattedName = utilityService.formatFullName(requestDto.getFullName());
+        String code = generateUniqueEmployeeCode();
+        Department department = getOrCreateDepartment(requestDto.getDepartment());
+
+        Employee employee = new Employee(code, formattedName, requestDto.getEmail(), requestDto.getSalary(), department);
+        Employee saved = employeeRepository.save(employee);
+        LOGGER.info("Saved employee [code={}, name={}] to database.", saved.getEmployeeCode(), saved.getName());
+
+        return toResponseDto(saved);
+    }
+
+    /**
+     * Updates an existing employee in the database.
+     *
+     * @param employeeCode code of employee to update
+     * @param requestDto updated employee details
+     * @return optional containing updated EmployeeResponseDto, or empty if not found
+     */
+    @Transactional
+    public Optional<EmployeeResponseDto> updateEmployee(String employeeCode, EmployeeRequestDto requestDto) {
+        LOGGER.info("Updating employee with code: {}", employeeCode);
+
+        Optional<Employee> existingOpt = employeeRepository.findByEmployeeCode(employeeCode);
+        if (existingOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Employee employee = existingOpt.get();
+
+        // Check email uniqueness if email is changed
+        if (!employee.getEmail().equalsIgnoreCase(requestDto.getEmail())
+                && employeeRepository.existsByEmail(requestDto.getEmail())) {
+            throw new IllegalArgumentException("Email already in use by another employee: " + requestDto.getEmail());
+        }
+
+        String formattedName = utilityService.formatFullName(requestDto.getFullName());
+        Department department = getOrCreateDepartment(requestDto.getDepartment());
+
+        employee.setName(formattedName);
+        employee.setEmail(requestDto.getEmail());
+        employee.setSalary(requestDto.getSalary());
+        employee.setDepartment(department);
+
+        Employee updated = employeeRepository.save(employee);
+        LOGGER.info("Updated employee [code={}, name={}] successfully.", updated.getEmployeeCode(), updated.getName());
+
+        return Optional.of(toResponseDto(updated));
+    }
+
+    /**
+     * Deletes an employee by employee code.
+     *
+     * @param employeeCode unique employee code
+     * @return true if deleted, false if not found
+     */
+    @Transactional
+    public boolean deleteEmployee(String employeeCode) {
+        LOGGER.info("Deleting employee with code: {}", employeeCode);
+
+        Optional<Employee> existingOpt = employeeRepository.findByEmployeeCode(employeeCode);
+        if (existingOpt.isEmpty()) {
+            LOGGER.warn("Employee with code: {} not found for deletion.", employeeCode);
+            return false;
+        }
+
+        employeeRepository.delete(existingOpt.get());
+        LOGGER.info("Employee with code: {} successfully deleted.", employeeCode);
+        return true;
     }
 
     /**
@@ -122,31 +214,41 @@ public class EmployeeService {
         return responseDto;
     }
 
-    private Employee createEmployeeInternal(String fullName, String email, String department, Double salary) {
-        String code = utilityService.generateEmployeeCode();
-        String formattedName = utilityService.formatFullName(fullName);
-
-        Employee employee = new Employee(code, formattedName, email, department, salary);
-        inMemoryEmployees.add(employee);
-        LOGGER.info("Added employee [code={}, name={}] to in-memory store.", code, formattedName);
-        return employee;
+    /**
+     * Converts an Employee entity to EmployeeResponseDto.
+     *
+     * @param employee employee entity
+     * @return mapped EmployeeResponseDto
+     */
+    public EmployeeResponseDto toResponseDto(Employee employee) {
+        if (employee == null) {
+            return null;
+        }
+        String deptName = employee.getDepartment() != null ? employee.getDepartment().getName() : null;
+        return new EmployeeResponseDto(
+                employee.getEmployeeCode(),
+                employee.getName(),
+                employee.getEmail(),
+                deptName,
+                employee.getSalary()
+        );
     }
 
-    private boolean matchesDepartment(Employee emp, String department) {
-        if (department == null || department.isBlank()) {
-            return true;
-        }
-        return emp.getDepartment() != null
-                && emp.getDepartment().toLowerCase(Locale.ROOT).contains(department.trim().toLowerCase(Locale.ROOT));
+    private Department getOrCreateDepartment(String departmentName) {
+        String trimmed = departmentName != null ? departmentName.trim() : "General";
+        return departmentRepository.findByNameIgnoreCase(trimmed)
+                .orElseGet(() -> {
+                    LOGGER.info("Department '{}' not found. Creating new department...", trimmed);
+                    Department newDept = new Department(trimmed, "Auto-created department");
+                    return departmentRepository.save(newDept);
+                });
     }
 
-    private boolean matchesKeyword(Employee emp, String keyword) {
-        if (keyword == null || keyword.isBlank()) {
-            return true;
-        }
-        String lowerKeyword = keyword.trim().toLowerCase(Locale.ROOT);
-        return (emp.getFullName() != null && emp.getFullName().toLowerCase(Locale.ROOT).contains(lowerKeyword))
-                || (emp.getEmail() != null && emp.getEmail().toLowerCase(Locale.ROOT).contains(lowerKeyword))
-                || (emp.getEmployeeCode() != null && emp.getEmployeeCode().toLowerCase(Locale.ROOT).contains(lowerKeyword));
+    private String generateUniqueEmployeeCode() {
+        String code;
+        do {
+            code = utilityService.generateEmployeeCode();
+        } while (employeeRepository.existsByEmployeeCode(code));
+        return code;
     }
 }
