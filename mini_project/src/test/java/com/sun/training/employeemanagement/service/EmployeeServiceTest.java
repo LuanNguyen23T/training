@@ -261,4 +261,20 @@ class EmployeeServiceTest {
         assertEquals(1, byDept.size());
         assertEquals("Human Resources", byDept.get(0).getDepartment());
     }
+
+    @Test
+    void testIsEmailExists_variousScenarios() {
+        Department dept = new Department("Engineering", "Tech");
+        Employee emp = new Employee("N0001", "Existing", "existing@sun.com", 10000000.0, dept);
+
+        when(employeeRepository.findByEmail("existing@sun.com")).thenReturn(Optional.of(emp));
+        when(employeeRepository.findByEmail("notfound@sun.com")).thenReturn(Optional.empty());
+
+        org.junit.jupiter.api.Assertions.assertTrue(employeeService.isEmailExists("existing@sun.com", null));
+        org.junit.jupiter.api.Assertions.assertFalse(employeeService.isEmailExists("existing@sun.com", "N0001"));
+        org.junit.jupiter.api.Assertions.assertTrue(employeeService.isEmailExists("existing@sun.com", "N0002"));
+        org.junit.jupiter.api.Assertions.assertFalse(employeeService.isEmailExists("notfound@sun.com", null));
+        org.junit.jupiter.api.Assertions.assertFalse(employeeService.isEmailExists("", null));
+        org.junit.jupiter.api.Assertions.assertFalse(employeeService.isEmailExists(null, null));
+    }
 }

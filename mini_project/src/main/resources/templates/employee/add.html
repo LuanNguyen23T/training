@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Thêm Nhân Viên Mới')}">
+</head>
+<body>
+    <nav th:replace="~{fragments/layout :: navbar('add')}"></nav>
+
+    <main class="main-content container">
+        <div class="row justify-content-center">
+            <div class="col-lg-7 col-md-9">
+                <!-- Breadcrumb -->
+                <nav aria-label="breadcrumb" class="mb-3">
+                    <ol class="breadcrumb small">
+                        <li class="breadcrumb-item"><a th:href="@{/employees/list}" class="text-decoration-none text-muted">Nhân viên</a></li>
+                        <li class="breadcrumb-item active text-dark fw-medium" aria-current="page">Thêm mới</li>
+                    </ol>
+                </nav>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="mb-0 fw-bold text-dark">
+                            <i class="bi bi-person-plus text-primary me-2"></i>Thêm Nhân Viên Mới
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <form th:action="@{/employees/add}" th:object="${employee}" method="post" novalidate id="employeeForm">
+                            <!-- Họ và Tên -->
+                            <div class="mb-3">
+                                <label for="fullName" class="form-label fw-semibold small text-secondary">
+                                    Họ và Tên <span class="text-danger">*</span>
+                                </label>
+                                <input type="text"
+                                       id="fullName"
+                                       th:field="*{fullName}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('fullName')} ? 'is-invalid' : ''"
+                                       placeholder="Ví dụ: Nguyễn Văn A">
+                                <div class="invalid-feedback" id="fullNameFeedback"
+                                     th:text="${#fields.hasErrors('fullName')} ? ${#fields.errors('fullName')[0]} : 'Vui lòng nhập họ và tên từ 2 đến 100 ký tự.'">
+                                    Vui lòng nhập họ và tên từ 2 đến 100 ký tự.
+                                </div>
+                            </div>
+
+                            <!-- Email -->
+                            <div class="mb-3">
+                                <label for="email" class="form-label fw-semibold small text-secondary">
+                                    Địa chỉ Email <span class="text-danger">*</span>
+                                </label>
+                                <input type="email"
+                                       id="email"
+                                       th:field="*{email}"
+                                       class="form-control"
+                                       th:classappend="${#fields.hasErrors('email')} ? 'is-invalid' : ''"
+                                       placeholder="Ví dụ: nguyenvana@sun-asterisk.com">
+                                <div class="invalid-feedback" id="emailFeedback"
+                                     th:text="${#fields.hasErrors('email')} ? ${#fields.errors('email')[0]} : 'Vui lòng nhập định dạng email hợp lệ.'">
+                                    Vui lòng nhập định dạng email hợp lệ.
+                                </div>
+                            </div>
+
+                            <!-- Phòng Ban -->
+                            <div class="mb-3">
+                                <label for="department" class="form-label fw-semibold small text-secondary">
+                                    Phòng Ban <span class="text-danger">*</span>
+                                </label>
+                                <select id="department"
+                                        th:field="*{department}"
+                                        class="form-select"
+                                        th:classappend="${#fields.hasErrors('department')} ? 'is-invalid' : ''">
+                                    <option value="">-- Chọn phòng ban --</option>
+                                    <option th:each="dept : ${departments}"
+                                            th:value="${dept}"
+                                            th:text="${dept}">
+                                    </option>
+                                </select>
+                                <div class="invalid-feedback" id="departmentFeedback"
+                                     th:text="${#fields.hasErrors('department')} ? ${#fields.errors('department')[0]} : 'Vui lòng chọn phòng ban.'">
+                                    Vui lòng chọn phòng ban.
+                                </div>
+                            </div>
+
+                            <!-- Mức Lương -->
+                            <div class="mb-4">
+                                <label for="salary" class="form-label fw-semibold small text-secondary">
+                                    Mức Lương (VNĐ) <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group has-validation">
+                                    <input type="number"
+                                           id="salary"
+                                           name="salary"
+                                           step="100000"
+                                           min="0"
+                                           th:value="${employee.salary != null ? #numbers.formatDecimal(employee.salary, 1, 'NONE', 0, 'POINT') : ''}"
+                                           class="form-control"
+                                           th:classappend="${#fields.hasErrors('salary')} ? 'is-invalid' : ''"
+                                           placeholder="Ví dụ: 15000000">
+                                    <span class="input-group-text bg-light text-muted">₫</span>
+                                    <div class="invalid-feedback" id="salaryFeedback"
+                                         th:text="${#fields.hasErrors('salary')} ? ${#fields.errors('salary')[0]} : 'Mức lương không được để trống và phải lớn hơn hoặc bằng 0.'">
+                                        Mức lương không được để trống và phải lớn hơn hoặc bằng 0.
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Nút hành động -->
+                            <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                                <a th:href="@{/employees/list}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x me-1"></i>Hủy
+                                </a>
+                                <button type="submit" class="btn btn-primary px-4">
+                                    <i class="bi bi-check2 me-1"></i>Lưu Nhân Viên
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+
+    <!-- Script kiểm tra tức thì khi điền xong hoặc nhấn Tab -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const form = document.getElementById('employeeForm');
+            if (!form) return;
+
+            const fields = {
+                fullName: {
+                    input: document.getElementById('fullName'),
+                    feedback: document.getElementById('fullNameFeedback'),
+                    validate: function (val) {
+                        val = (val || '').trim();
+                        if (!val) return 'Vui lòng nhập họ và tên.';
+                        if (val.length < 2 || val.length > 100) return 'Họ và tên phải có độ dài từ 2 đến 100 ký tự.';
+                        return null;
+                    }
+                },
+                email: {
+                    input: document.getElementById('email'),
+                    feedback: document.getElementById('emailFeedback'),
+                    validate: function (val) {
+                        val = (val || '').trim();
+                        if (!val) return 'Vui lòng nhập địa chỉ email.';
+                        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                        if (!emailRegex.test(val)) return 'Vui lòng nhập đúng định dạng email (ví dụ: name@company.com).';
+                        return null;
+                    }
+                },
+                department: {
+                    input: document.getElementById('department'),
+                    feedback: document.getElementById('departmentFeedback'),
+                    validate: function (val) {
+                        val = (val || '').trim();
+                        if (!val) return 'Vui lòng chọn hoặc nhập phòng ban.';
+                        return null;
+                    }
+                },
+                salary: {
+                    input: document.getElementById('salary'),
+                    feedback: document.getElementById('salaryFeedback'),
+                    validate: function (val) {
+                        val = (val || '').trim();
+                        if (!val) return 'Vui lòng nhập mức lương.';
+                        const num = Number(val);
+                        if (isNaN(num) || num < 0) return 'Mức lương phải là số lớn hơn hoặc bằng 0.';
+                        return null;
+                    }
+                }
+            };
+
+            async function checkDuplicateEmail(emailVal) {
+                try {
+                    const res = await fetch('/api/v1/employees/check-email?email=' + encodeURIComponent(emailVal));
+                    if (res.ok) {
+                        const data = await res.json();
+                        return data.exists === true;
+                    }
+                } catch (e) {
+                    // Fallback to server validation if fetch fails
+                }
+                return false;
+            }
+
+            async function validateEmailField() {
+                const item = fields.email;
+                if (!item || !item.input) return true;
+                const err = item.validate(item.input.value);
+                if (err) {
+                    item.input.classList.add('is-invalid');
+                    item.input.classList.remove('is-valid');
+                    if (item.feedback) item.feedback.textContent = err;
+                    return false;
+                }
+
+                const isDuplicate = await checkDuplicateEmail(item.input.value.trim());
+                if (isDuplicate) {
+                    item.input.classList.add('is-invalid');
+                    item.input.classList.remove('is-valid');
+                    if (item.feedback) item.feedback.textContent = 'Email này đã tồn tại trong hệ thống, vui lòng chọn email khác.';
+                    return false;
+                } else {
+                    item.input.classList.remove('is-invalid');
+                    item.input.classList.add('is-valid');
+                    return true;
+                }
+            }
+
+            function validateField(key) {
+                if (key === 'email') {
+                    validateEmailField();
+                    return;
+                }
+                const item = fields[key];
+                if (!item || !item.input) return true;
+                const err = item.validate(item.input.value);
+                if (err) {
+                    item.input.classList.add('is-invalid');
+                    item.input.classList.remove('is-valid');
+                    if (item.feedback) item.feedback.textContent = err;
+                    return false;
+                } else {
+                    item.input.classList.remove('is-invalid');
+                    item.input.classList.add('is-valid');
+                    return true;
+                }
+            }
+
+            Object.keys(fields).forEach(function (key) {
+                const item = fields[key];
+                if (!item || !item.input) return;
+
+                // Kiểm tra ngay khi rời ô hoặc thay đổi lựa chọn (select)
+                item.input.addEventListener('blur', function () {
+                    validateField(key);
+                });
+                item.input.addEventListener('change', function () {
+                    validateField(key);
+                });
+
+                // Xóa trạng thái lỗi khi người dùng đang nhập lại dữ liệu
+                item.input.addEventListener('input', function () {
+                    if (item.input.classList.contains('is-invalid')) {
+                        validateField(key);
+                    }
+                });
+            });
+
+            // Kiểm tra toàn bộ form trước khi submit
+            form.addEventListener('submit', async function (e) {
+                let hasError = false;
+                for (const key of Object.keys(fields)) {
+                    if (key === 'email') {
+                        const emailValid = await validateEmailField();
+                        if (!emailValid) hasError = true;
+                    } else {
+                        const fieldValid = validateField(key);
+                        if (fieldValid === false) hasError = true;
+                    }
+                }
+                if (hasError) {
+                    e.preventDefault();
+                    const firstInvalid = form.querySelector('.is-invalid');
+                    if (firstInvalid) firstInvalid.focus();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

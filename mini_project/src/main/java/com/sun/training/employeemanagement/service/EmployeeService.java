@@ -9,6 +9,7 @@ import com.sun.training.employeemanagement.exception.DuplicateResourceException;
 import com.sun.training.employeemanagement.exception.ResourceNotFoundException;
 import com.sun.training.employeemanagement.repository.DepartmentRepository;
 import com.sun.training.employeemanagement.repository.EmployeeRepository;
+import java.util.Comparator;
 import java.util.List;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
@@ -61,6 +62,7 @@ public class EmployeeService {
         return employeeRepository.searchEmployees(department, keyword)
                 .stream()
                 .map(this::toResponseDto)
+                .sorted(Comparator.comparing(EmployeeResponseDto::getEmployeeCode))
                 .toList();
     }
 
@@ -93,6 +95,7 @@ public class EmployeeService {
         return employeeRepository.findByNameContainingIgnoreCase(name.trim())
                 .stream()
                 .map(this::toResponseDto)
+                .sorted(Comparator.comparing(EmployeeResponseDto::getEmployeeCode))
                 .toList();
     }
 
@@ -110,7 +113,26 @@ public class EmployeeService {
         return employeeRepository.findByDepartmentNameIgnoreCase(departmentName.trim())
                 .stream()
                 .map(this::toResponseDto)
+                .sorted(Comparator.comparing(EmployeeResponseDto::getEmployeeCode))
                 .toList();
+    }
+
+    /**
+     * Checks if an email already exists in the system, optionally excluding an employee code.
+     *
+     * @param email email to check
+     * @param excludeCode optional employee code to exclude (for update flows)
+     * @return true if email exists for another employee, false otherwise
+     */
+    public boolean isEmailExists(String email, String excludeCode) {
+        if (email == null || email.isBlank()) {
+            return false;
+        }
+        String cleanEmail = email.trim();
+        return employeeRepository.findByEmail(cleanEmail)
+                .map(emp -> excludeCode == null || excludeCode.isBlank()
+                        || !emp.getEmployeeCode().equalsIgnoreCase(excludeCode.trim()))
+                .orElseGet(() -> employeeRepository.existsByEmail(cleanEmail));
     }
 
     /**

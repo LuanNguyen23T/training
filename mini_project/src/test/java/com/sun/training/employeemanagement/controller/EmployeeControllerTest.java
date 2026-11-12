@@ -263,4 +263,25 @@ class EmployeeControllerTest {
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.message").value("Employee with code 'NOT_EXIST' not found"));
     }
+
+    @Test
+    void testCheckEmail_whenExists_returnsTrue() throws Exception {
+        when(employeeService.isEmailExists("luan.nguyen@sun-asterisk.com", null)).thenReturn(true);
+
+        mockMvc.perform(get("/api/v1/employees/check-email")
+                        .param("email", "luan.nguyen@sun-asterisk.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.exists").value(true))
+                .andExpect(jsonPath("$.email").value("luan.nguyen@sun-asterisk.com"));
+    }
+
+    @Test
+    void testCheckEmail_whenNotExists_returnsFalse() throws Exception {
+        when(employeeService.isEmailExists("new@sun-asterisk.com", null)).thenReturn(false);
+
+        mockMvc.perform(get("/api/v1/employees/check-email")
+                        .param("email", "new@sun-asterisk.com"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.exists").value(false));
+    }
 }

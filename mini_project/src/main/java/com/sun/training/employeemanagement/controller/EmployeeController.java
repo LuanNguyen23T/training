@@ -6,6 +6,7 @@ import com.sun.training.employeemanagement.service.EmployeeService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -93,6 +94,27 @@ public class EmployeeController {
         LOGGER.info("GET /api/v1/employees/search/department requested with department='{}'", name);
         List<EmployeeResponseDto> results = employeeService.searchEmployeesByDepartment(name);
         return ResponseEntity.ok(results);
+    }
+
+    /**
+     * API to check if an email already exists in the system.
+     * Useful for dynamic client-side and external validation.
+     *
+     * @param email email to verify
+     * @param excludeCode optional employee code to exclude (for update flows)
+     * @return response entity containing exists boolean and message
+     */
+    @GetMapping("/check-email")
+    public ResponseEntity<Map<String, Object>> checkEmail(
+            @RequestParam String email,
+            @RequestParam(required = false) String excludeCode) {
+        LOGGER.info("GET /api/v1/employees/check-email requested (email='{}', excludeCode='{}')", email, excludeCode);
+        boolean exists = employeeService.isEmailExists(email, excludeCode);
+        return ResponseEntity.ok(java.util.Map.of(
+                "email", email,
+                "exists", exists,
+                "message", exists ? "Email đã tồn tại trong hệ thống" : "Email hợp lệ"
+        ));
     }
 
     /**

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/layout :: head('Tìm Kiếm Nhân Viên')}">
+</head>
+<body>
+    <nav th:replace="~{fragments/layout :: navbar('search')}"></nav>
+
+    <main class="main-content container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <!-- Thẻ tìm kiếm -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0 fw-bold text-dark">
+                            <i class="bi bi-search text-primary me-2"></i>Tìm Kiếm Nhân Viên
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <form th:action="@{/employees/search}" method="get" class="row g-3">
+                            <div class="col-md-6">
+                                <label for="name" class="form-label fw-semibold small text-secondary">Tên Nhân Viên</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted border-end-0">
+                                        <i class="bi bi-person"></i>
+                                    </span>
+                                    <input type="text"
+                                           id="name"
+                                           name="name"
+                                           th:value="${searchName}"
+                                           class="form-control bg-light border-start-0"
+                                           placeholder="Nhập tên nhân viên cần tìm...">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="department" class="form-label fw-semibold small text-secondary">Phòng Ban</label>
+                                <select id="department" name="department" class="form-select bg-light">
+                                    <option value="">-- Tất cả phòng ban --</option>
+                                    <option th:each="dept : ${departments}"
+                                            th:value="${dept}"
+                                            th:text="${dept}"
+                                            th:selected="${dept == searchDepartment}">
+                                    </option>
+                                </select>
+                            </div>
+                            <div class="col-12 d-flex justify-content-end gap-2 pt-2">
+                                <a th:href="@{/employees/search}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-counterclockwise me-1"></i>Đặt Lại
+                                </a>
+                                <button type="submit" class="btn btn-primary px-4">
+                                    <i class="bi bi-search me-1"></i>Tìm Kiếm
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Kết quả tìm kiếm -->
+                <div class="card" th:if="${hasSearched}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h6 class="mb-0 fw-bold text-dark">
+                            <i class="bi bi-card-checklist me-2 text-primary"></i>Kết Quả Tìm Kiếm
+                        </h6>
+                        <span class="badge bg-light text-primary border px-3 py-2"
+                              th:text="'Tìm thấy ' + ${#lists.size(results)} + ' nhân viên'">
+                            Tìm thấy 0 nhân viên
+                        </span>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th class="ps-4">
+                                            Mã NV <i class="bi bi-sort-numeric-down text-primary ms-1" title="Sắp xếp tăng dần theo Mã NV"></i>
+                                        </th>
+                                        <th>Họ và Tên</th>
+                                        <th>Email</th>
+                                        <th>Phòng Ban</th>
+                                        <th class="text-end">Mức Lương</th>
+                                        <th class="text-center pe-4" style="min-width: 170px;">Thao Tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:if="${#lists.isEmpty(results)}">
+                                        <td colspan="6" class="text-center py-5 text-muted">
+                                            <div class="py-3">
+                                                <i class="bi bi-search fs-1 d-block mb-2 text-secondary opacity-50"></i>
+                                                <p class="mb-0 fw-medium">Không tìm thấy nhân viên nào phù hợp với điều kiện tìm kiếm.</p>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr th:each="emp : ${results}">
+                                        <td class="ps-4">
+                                            <span class="badge bg-light text-primary border font-monospace px-2 py-1"
+                                                  th:text="${emp.employeeCode}">N0001</span>
+                                        </td>
+                                        <td>
+                                            <span class="fw-semibold text-dark" th:text="${emp.fullName}">Nguyễn Văn A</span>
+                                        </td>
+                                        <td>
+                                            <a th:href="'mailto:' + ${emp.email}" class="text-decoration-none text-muted" th:text="${emp.email}">email@sun-asterisk.com</a>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-secondary border fw-normal" th:text="${emp.department}">Engineering</span>
+                                        </td>
+                                        <td class="text-end fw-semibold text-dark"
+                                            th:text="${emp.salary != null ? #numbers.formatDecimal(emp.salary, 0, 'COMMA', 0, 'POINT') + ' ₫' : 'Chưa có'}">
+                                            15,000,000 ₫
+                                        </td>
+                                        <td class="text-center pe-4">
+                                            <div class="d-inline-flex gap-1" role="group">
+                                                <a th:href="@{/employees/edit/{code}(code=${emp.employeeCode})}"
+                                                   class="btn btn-outline-primary btn-sm"
+                                                   title="Sửa thông tin">
+                                                    <i class="bi bi-pencil-square me-1"></i>Sửa
+                                                </a>
+                                                <a th:href="@{/employees/delete/{code}(code=${emp.employeeCode})}"
+                                                   class="btn btn-outline-danger btn-sm"
+                                                   onclick="return confirm('Bạn có chắc chắn muốn xóa nhân viên này không?');"
+                                                   title="Xóa nhân viên">
+                                                    <i class="bi bi-trash me-1"></i>Xóa
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Trạng thái chưa tìm kiếm -->
+                <div class="card text-center py-5 text-muted" th:unless="${hasSearched}">
+                    <div class="card-body">
+                        <i class="bi bi-search fs-1 d-block mb-3 text-primary opacity-50"></i>
+                        <h6 class="fw-semibold text-dark">Nhập tên hoặc chọn phòng ban để bắt đầu tra cứu</h6>
+                        <p class="small text-muted mb-0">Hệ thống hỗ trợ tìm kiếm không phân biệt chữ hoa, chữ thường</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer th:replace="~{fragments/layout :: footer}"></footer>
+</body>
+</html>
