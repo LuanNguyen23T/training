@@ -2,6 +2,8 @@ package com.sun.training.employeemanagement.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -13,9 +15,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.sun.training.employeemanagement.dto.EmployeeRequestDto;
 import com.sun.training.employeemanagement.dto.EmployeeResponseDto;
+import com.sun.training.employeemanagement.exception.GlobalExceptionHandler;
+import com.sun.training.employeemanagement.exception.ResourceNotFoundException;
 import com.sun.training.employeemanagement.service.EmployeeService;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,7 +39,9 @@ class EmployeeControllerTest {
     @BeforeEach
     void setUp() {
         EmployeeController controller = new EmployeeController(employeeService);
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
     }
 
     @Test
@@ -78,7 +83,7 @@ class EmployeeControllerTest {
         EmployeeResponseDto emp = new EmployeeResponseDto(
                 "N0001", "Nguyen Huu Hoang Luan", "luan.nguyen@sun-asterisk.com", "Engineering", 15000000.0);
 
-        when(employeeService.getEmployeeByCode("N0001")).thenReturn(Optional.of(emp));
+        when(employeeService.getEmployeeByCode("N0001")).thenReturn(emp);
 
         mockMvc.perform(get("/api/v1/employees/N0001"))
                 .andExpect(status().isOk())
@@ -88,11 +93,16 @@ class EmployeeControllerTest {
     }
 
     @Test
-    void testGetEmployeeByCode_whenNotFound_returns404() throws Exception {
-        when(employeeService.getEmployeeByCode("NON_EXIST")).thenReturn(Optional.empty());
+    void testGetEmployeeByCode_whenNotFound_returns404WithStructuredJson() throws Exception {
+        when(employeeService.getEmployeeByCode("NON_EXIST"))
+                .thenThrow(new ResourceNotFoundException("Employee with code 'NON_EXIST' not found"));
 
         mockMvc.perform(get("/api/v1/employees/NON_EXIST"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Employee with code 'NON_EXIST' not found"))
+                .andExpect(jsonPath("$.path").value("/api/v1/employees/NON_EXIST"));
     }
 
     @Test
@@ -150,6 +160,45 @@ class EmployeeControllerTest {
     }
 
     @Test
+    void testCreateEmployee_invalidInput_returns400WithValidationErrors() throws Exception {
+        String invalidRequestJson = """
+                {
+                    "fullName": "",
+                    "email": "not-an-email",
+                    "department": "",
+                    "salary": -500
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/employees")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidRequestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Validation failed for request payload"))
+                .andExpect(jsonPath("$.validationErrors").isArray());
+    }
+
+    @Test
+    void testCreateEmployeeWithBindingResult_invalidInput_returns400() throws Exception {
+        String invalidRequestJson = """
+                {
+                    "fullName": "",
+                    "email": "invalid-email",
+                    "department": "",
+                    "salary": -100
+                }
+                """;
+
+        mockMvc.perform(post("/api/v1/employees/validate-demo")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidRequestJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
     void testUpdateEmployee_whenFound_returns200() throws Exception {
         String requestJson = """
                 {
@@ -164,7 +213,7 @@ class EmployeeControllerTest {
                 "N0001", "Nguyen Huu Hoang Luan Updated", "luan.updated@sun-asterisk.com", "Engineering", 18000000.0);
 
         when(employeeService.updateEmployee(eq("N0001"), any(EmployeeRequestDto.class)))
-                .thenReturn(Optional.of(updatedDto));
+                .thenReturn(updatedDto);
 
         mockMvc.perform(put("/api/v1/employees/N0001")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -186,17 +235,19 @@ class EmployeeControllerTest {
                 """;
 
         when(employeeService.updateEmployee(eq("NOT_EXIST"), any(EmployeeRequestDto.class)))
-                .thenReturn(Optional.empty());
+                .thenThrow(new ResourceNotFoundException("Employee with code 'NOT_EXIST' not found"));
 
         mockMvc.perform(put("/api/v1/employees/NOT_EXIST")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(requestJson))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Employee with code 'NOT_EXIST' not found"));
     }
 
     @Test
     void testDeleteEmployee_whenFound_returns204() throws Exception {
-        when(employeeService.deleteEmployee("N0001")).thenReturn(true);
+        doNothing().when(employeeService).deleteEmployee("N0001");
 
         mockMvc.perform(delete("/api/v1/employees/N0001"))
                 .andExpect(status().isNoContent());
@@ -204,9 +255,12 @@ class EmployeeControllerTest {
 
     @Test
     void testDeleteEmployee_whenNotFound_returns404() throws Exception {
-        when(employeeService.deleteEmployee("NOT_EXIST")).thenReturn(false);
+        doThrow(new ResourceNotFoundException("Employee with code 'NOT_EXIST' not found"))
+                .when(employeeService).deleteEmployee("NOT_EXIST");
 
         mockMvc.perform(delete("/api/v1/employees/NOT_EXIST"))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("Employee with code 'NOT_EXIST' not found"));
     }
 }
