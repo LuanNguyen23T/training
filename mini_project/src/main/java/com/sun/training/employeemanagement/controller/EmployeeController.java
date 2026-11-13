@@ -118,6 +118,22 @@ public class EmployeeController {
     }
 
     /**
+     * API to retrieve total employee count report with 1-minute caching (Module 8).
+     *
+     * @return response entity with total employee count and report timestamp
+     */
+    @GetMapping("/reports/total-count")
+    public ResponseEntity<Map<String, Object>> getTotalEmployeeCountReport() {
+        LOGGER.info("GET /api/v1/employees/reports/total-count requested");
+        long totalCount = employeeService.getTotalEmployeeCount();
+        return ResponseEntity.ok(Map.of(
+                "totalEmployees", totalCount,
+                "timestamp", java.time.LocalDateTime.now().toString(),
+                "cachedTtl", "60s"
+        ));
+    }
+
+    /**
      * API to create a new employee persisted to the database with Bean Validation.
      *
      * @param requestDto validated employee request payload

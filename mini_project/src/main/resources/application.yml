@@ -12,6 +12,19 @@ spring:
     suffix: .html
     mode: HTML
     encoding: UTF-8
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=60s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
 
 server:
   port: 8080

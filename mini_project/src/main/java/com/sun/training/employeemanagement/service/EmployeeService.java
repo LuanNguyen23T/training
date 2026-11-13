@@ -14,6 +14,8 @@ import java.util.List;
 import org.modelmapper.ModelMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -118,6 +120,20 @@ public class EmployeeService {
     }
 
     /**
+     * Retrieves the total count of employees in the system with 1-minute caching (Module 8).
+     * Cached with key 'totalCount' under cache name 'employeeTotalCount'.
+     *
+     * @return total number of employees
+     */
+    @Cacheable(value = "employeeTotalCount", key = "'totalCount'")
+    public long getTotalEmployeeCount() {
+        LOGGER.info("Executing database query to count total employees (CACHE MISS)...");
+        long count = employeeRepository.count();
+        LOGGER.info("Total employee count retrieved from DB: {}", count);
+        return count;
+    }
+
+    /**
      * Checks if an email already exists in the system, optionally excluding an employee code.
      *
      * @param email email to check
@@ -143,6 +159,7 @@ public class EmployeeService {
      * @throws DuplicateResourceException if an employee with the same email already exists
      */
     @Transactional
+    @CacheEvict(value = "employeeTotalCount", allEntries = true)
     public EmployeeResponseDto createEmployee(EmployeeRequestDto requestDto) {
         LOGGER.info("Starting employee creation process for email: '{}', name: '{}'", requestDto.getEmail(), requestDto.getFullName());
 
@@ -219,6 +236,7 @@ public class EmployeeService {
      * @throws ResourceNotFoundException if employee with given code is not found
      */
     @Transactional
+    @CacheEvict(value = "employeeTotalCount", allEntries = true)
     public void deleteEmployee(String employeeCode) {
         LOGGER.info("Starting employee deletion process for code: '{}'", employeeCode);
 

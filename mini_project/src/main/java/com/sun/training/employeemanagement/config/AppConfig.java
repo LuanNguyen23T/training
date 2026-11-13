@@ -4,8 +4,10 @@ import java.util.Set;
 
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.config.BeanPostProcessor;
+import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.thymeleaf.spring6.SpringTemplateEngine;
 
 import com.sun.training.employeemanagement.dto.DepartmentResponseDto;
@@ -18,6 +20,8 @@ import com.sun.training.employeemanagement.entity.Employee;
  * Application configuration defining custom beans for Spring IoC Container.
  */
 @Configuration
+@EnableCaching
+@EnableScheduling
 public class AppConfig {
 
     /**
