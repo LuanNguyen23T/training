@@ -72,6 +72,20 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void testHandleNoResourceFoundException() {
+        org.springframework.web.servlet.resource.NoResourceFoundException ex =
+                mock(org.springframework.web.servlet.resource.NoResourceFoundException.class);
+        when(ex.getMessage()).thenReturn("No static resource favicon.ico");
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleNoResourceFoundException(ex, request);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(404, response.getBody().getStatus());
+        assertEquals("No static resource favicon.ico", response.getBody().getMessage());
+    }
+
+    @Test
     void testHandleGenericException() {
         Exception ex = new RuntimeException("Unexpected database failure");
         ResponseEntity<ErrorResponse> response = exceptionHandler.handleGenericException(ex, request);

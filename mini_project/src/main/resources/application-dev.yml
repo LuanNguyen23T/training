@@ -1,0 +1,29 @@
+# ===================================================================
+# Profile: DEV (Môi trường phát triển cục bộ)
+# CSDL: H2 File-based (Dữ liệu lưu tại ./data/employeedb.mv.db)
+# ===================================================================
+spring:
+  config:
+    activate:
+      on-profile: dev
+  datasource:
+    url: jdbc:h2:file:./data/employeedb;AUTO_SERVER=TRUE;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      "[hibernate.format_sql]": true
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+logging:
+  level:
+    root: INFO
+    "[com.sun.training.employeemanagement]": DEBUG
+    "[org.hibernate.SQL]": DEBUG

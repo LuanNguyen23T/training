@@ -36,3 +36,8 @@ build/
 data/
 *.mv.db
 *.trace.db
+
+# Application Logs
+logs/
+*.log
+*.log.gz
