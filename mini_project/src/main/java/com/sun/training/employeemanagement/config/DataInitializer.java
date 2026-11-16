@@ -2,12 +2,16 @@ package com.sun.training.employeemanagement.config;
 
 import com.sun.training.employeemanagement.entity.Department;
 import com.sun.training.employeemanagement.entity.Employee;
+import com.sun.training.employeemanagement.entity.Role;
+import com.sun.training.employeemanagement.entity.User;
 import com.sun.training.employeemanagement.repository.DepartmentRepository;
 import com.sun.training.employeemanagement.repository.EmployeeRepository;
+import com.sun.training.employeemanagement.repository.UserRepository;
 import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /**
@@ -20,16 +24,26 @@ public class DataInitializer implements CommandLineRunner {
 
     private final DepartmentRepository departmentRepository;
     private final EmployeeRepository employeeRepository;
+    private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     /**
-     * Constructor injection for repositories.
+     * Constructor injection for repositories and password encoder.
      *
      * @param departmentRepository department repository bean
      * @param employeeRepository employee repository bean
+     * @param userRepository user repository bean
+     * @param passwordEncoder password encoder bean
      */
-    public DataInitializer(DepartmentRepository departmentRepository, EmployeeRepository employeeRepository) {
+    public DataInitializer(
+            DepartmentRepository departmentRepository,
+            EmployeeRepository employeeRepository,
+            UserRepository userRepository,
+            PasswordEncoder passwordEncoder) {
         this.departmentRepository = departmentRepository;
         this.employeeRepository = employeeRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -53,6 +67,15 @@ public class DataInitializer implements CommandLineRunner {
             employeeRepository.saveAll(initialEmployees);
             LOGGER.info("Seeded 3 departments and {} employees into database.", initialEmployees.size());
         }
+
+        if (userRepository.count() == 0) {
+            LOGGER.info("Seeding initial security users into database (Module 9)...");
+
+            User admin = new User("admin", passwordEncoder.encode("admin123"), Role.ROLE_ADMIN);
+            User user = new User("user", passwordEncoder.encode("user123"), Role.ROLE_USER);
+
+            userRepository.saveAll(List.of(admin, user));
+            LOGGER.info("Seeded default users: admin (ROLE_ADMIN) and user (ROLE_USER)");
+        }
     }
 }
-

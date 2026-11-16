@@ -7,6 +7,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 import com.sun.training.employeemanagement.dto.EmployeeRequestDto;
+import com.sun.training.employeemanagement.dto.EmployeeResponseDto;
 import com.sun.training.employeemanagement.repository.EmployeeRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -76,9 +77,12 @@ class EmployeeCacheIntegrationTest {
         request.setDepartment("IT");
         request.setSalary(15000000.0);
 
-        employeeService.createEmployee(request);
+        EmployeeResponseDto created = employeeService.createEmployee(request);
 
         // Verify cache was evicted
         assertNull(cache.get("totalCount"));
+
+        // Cleanup: remove created test employee immediately so DB stays clean
+        employeeService.deleteEmployee(created.getEmployeeCode());
     }
 }

@@ -29,3 +29,8 @@ management:
 server:
   port: 8080
 
+app:
+  jwt:
+    secret: SunAsteriskTrainingEmployeeManagementSystemJwtSecretKey2026Secure
+    expiration-ms: 86400000 # 24 hours
+
