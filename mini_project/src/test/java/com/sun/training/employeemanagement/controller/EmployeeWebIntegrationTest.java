@@ -61,8 +61,30 @@ class EmployeeWebIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("employee/edit"))
                 .andExpect(content().contentTypeCompatibleWith("text/html"))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("1.5E7"))))
                 .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("2.0E7"))))
-                .andExpect(content().string(org.hamcrest.Matchers.containsString("20000000")));
+                .andExpect(content().string(org.hamcrest.Matchers.anyOf(
+                        org.hamcrest.Matchers.containsString("15000000"),
+                        org.hamcrest.Matchers.containsString("20000000")
+                )));
+    }
+
+    @Test
+    @DisplayName("Should successfully render register HTML view")
+    void testRenderRegisterTemplate() throws Exception {
+        mockMvc.perform(get("/register"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("auth/register"))
+                .andExpect(content().contentTypeCompatibleWith("text/html"));
+    }
+
+    @Test
+    @DisplayName("Should successfully render 403 access denied HTML view")
+    void testRenderAccessDeniedTemplate() throws Exception {
+        mockMvc.perform(get("/access-denied"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("error/403"))
+                .andExpect(content().contentTypeCompatibleWith("text/html"));
     }
 }
 

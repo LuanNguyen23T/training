@@ -86,6 +86,30 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void testHandleAuthenticationException() {
+        org.springframework.security.authentication.BadCredentialsException ex =
+                new org.springframework.security.authentication.BadCredentialsException("Bad credentials");
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleAuthenticationException(ex, request);
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(401, response.getBody().getStatus());
+        assertEquals("Invalid username or password", response.getBody().getMessage());
+    }
+
+    @Test
+    void testHandleAccessDeniedException() {
+        org.springframework.security.access.AccessDeniedException ex =
+                new org.springframework.security.access.AccessDeniedException("Access is denied");
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleAccessDeniedException(ex, request);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertEquals(403, response.getBody().getStatus());
+        assertEquals("Access denied: You do not have permission to access this resource", response.getBody().getMessage());
+    }
+
+    @Test
     void testHandleGenericException() {
         Exception ex = new RuntimeException("Unexpected database failure");
         ResponseEntity<ErrorResponse> response = exceptionHandler.handleGenericException(ex, request);
