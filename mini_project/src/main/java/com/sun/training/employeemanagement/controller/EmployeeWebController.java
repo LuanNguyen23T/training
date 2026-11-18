@@ -2,6 +2,7 @@ package com.sun.training.employeemanagement.controller;
 
 import com.sun.training.employeemanagement.dto.EmployeeRequestDto;
 import com.sun.training.employeemanagement.dto.EmployeeResponseDto;
+import com.sun.training.employeemanagement.dto.EmployeeStatisticsDto;
 import com.sun.training.employeemanagement.entity.Department;
 import com.sun.training.employeemanagement.exception.DuplicateResourceException;
 import com.sun.training.employeemanagement.repository.DepartmentRepository;
@@ -257,6 +258,35 @@ public class EmployeeWebController {
         LOGGER.info("GET /employees/check-email (email='{}', excludeCode='{}')", email, excludeCode);
         boolean exists = employeeService.isEmailExists(email, excludeCode);
         return ResponseEntity.ok(java.util.Map.of("exists", exists));
+    }
+
+    /**
+     * Displays the employee reporting and analytics statistics page (Module 10).
+     *
+     * @param model Spring MVC model
+     * @return employee statistics view template
+     */
+    @GetMapping("/statistics")
+    public String showStatistics(Model model) {
+        LOGGER.info("Rendering web statistics page /employees/statistics");
+        EmployeeStatisticsDto stats = employeeService.getOverallStatistics();
+        List<Map<String, Object>> departmentStats = stats.getByDepartment().stream()
+                .map(s -> Map.<String, Object>of(
+                        "departmentName", s.getDepartmentName(),
+                        "employeeCount", s.getEmployeeCount(),
+                        "averageSalary", s.getAverageSalary() != null ? s.getAverageSalary() : 0.0,
+                        "percentage", s.getPercentage() != null ? s.getPercentage() : 0.0
+                ))
+                .toList();
+
+        model.addAttribute("stats", stats);
+        model.addAttribute("totalEmployees", stats.getTotalEmployees());
+        model.addAttribute("totalDepartments", stats.getTotalDepartments());
+        model.addAttribute("averageSalary", stats.getAverageSalary());
+        model.addAttribute("highestSalary", stats.getHighestSalary());
+        model.addAttribute("lowestSalary", stats.getLowestSalary());
+        model.addAttribute("departmentStats", departmentStats);
+        return "employee/statistics";
     }
 
     private void populateDepartments(Model model) {

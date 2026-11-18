@@ -1,8 +1,10 @@
 package com.sun.training.employeemanagement.service;
 
+import com.sun.training.employeemanagement.dto.DepartmentStatisticDto;
 import com.sun.training.employeemanagement.dto.EmployeeRegistrationDto;
 import com.sun.training.employeemanagement.dto.EmployeeRequestDto;
 import com.sun.training.employeemanagement.dto.EmployeeResponseDto;
+import com.sun.training.employeemanagement.dto.EmployeeStatisticsDto;
 import com.sun.training.employeemanagement.entity.Department;
 import com.sun.training.employeemanagement.entity.Employee;
 import com.sun.training.employeemanagement.exception.DuplicateResourceException;
@@ -131,6 +133,48 @@ public class EmployeeService {
         long count = employeeRepository.count();
         LOGGER.info("Total employee count retrieved from DB: {}", count);
         return count;
+    }
+
+    /**
+     * Retrieves statistics of employee distribution across departments (Module 10).
+     * Calculates percentages of employee counts per department.
+     *
+     * @return list of department statistics with computed percentages
+     */
+    public List<DepartmentStatisticDto> getDepartmentStatistics() {
+        LOGGER.info("Calculating employee statistics by department (Module 10)...");
+        long totalEmployees = employeeRepository.countTotalEmployees();
+        List<DepartmentStatisticDto> stats = departmentRepository.countEmployeesPerDepartment();
+
+        for (DepartmentStatisticDto stat : stats) {
+            double pct = totalEmployees > 0 ? (stat.getEmployeeCount() * 100.0 / totalEmployees) : 0.0;
+            stat.setPercentage(Math.round(pct * 10.0) / 10.0);
+        }
+        return stats;
+    }
+
+    /**
+     * Retrieves overall system statistics for employees and departments (Module 10).
+     *
+     * @return EmployeeStatisticsDto containing aggregated totals, salaries, and department breakdowns
+     */
+    public EmployeeStatisticsDto getOverallStatistics() {
+        LOGGER.info("Aggregating overall employee reporting and analytics (Module 10)...");
+        long totalEmployees = employeeRepository.countTotalEmployees();
+        long totalDepartments = departmentRepository.count();
+        Double avgSalary = employeeRepository.calculateAverageSalary();
+        Double maxSalary = employeeRepository.findMaxSalary();
+        Double minSalary = employeeRepository.findMinSalary();
+        List<DepartmentStatisticDto> departmentStats = getDepartmentStatistics();
+
+        return new EmployeeStatisticsDto(
+                totalEmployees,
+                totalDepartments,
+                avgSalary != null ? Math.round(avgSalary * 100.0) / 100.0 : 0.0,
+                maxSalary != null ? maxSalary : 0.0,
+                minSalary != null ? minSalary : 0.0,
+                departmentStats
+        );
     }
 
     /**

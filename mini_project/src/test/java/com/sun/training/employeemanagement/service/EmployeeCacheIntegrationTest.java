@@ -74,7 +74,7 @@ class EmployeeCacheIntegrationTest {
         EmployeeRequestDto request = new EmployeeRequestDto();
         request.setFullName("Cache Test User");
         request.setEmail("cache.test." + System.currentTimeMillis() + "@sun-asterisk.com");
-        request.setDepartment("IT");
+        request.setDepartment("Engineering");
         request.setSalary(15000000.0);
 
         EmployeeResponseDto created = employeeService.createEmployee(request);

@@ -1,5 +1,6 @@
 package com.sun.training.employeemanagement.repository;
 
+import com.sun.training.employeemanagement.dto.DepartmentStatisticDto;
 import com.sun.training.employeemanagement.entity.Department;
 import java.util.List;
 import java.util.Optional;
@@ -42,4 +43,18 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
      */
     @Query("SELECT DISTINCT d FROM Department d LEFT JOIN FETCH d.employees")
     List<Department> findAllWithEmployees();
+
+    /**
+     * Aggregates employee counts across all departments, including departments with 0 employees (Module 10).
+     *
+     * @return list of department statistics projection
+     */
+    @Query("SELECT new com.sun.training.employeemanagement.dto.DepartmentStatisticDto("
+            + "d.name, "
+            + "COUNT(e), "
+            + "COALESCE(AVG(e.salary), 0.0)) "
+            + "FROM Department d LEFT JOIN d.employees e "
+            + "GROUP BY d.id, d.name "
+            + "ORDER BY COUNT(e) DESC, d.name ASC")
+    List<DepartmentStatisticDto> countEmployeesPerDepartment();
 }
