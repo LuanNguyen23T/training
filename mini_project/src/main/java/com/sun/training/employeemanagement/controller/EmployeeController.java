@@ -1,7 +1,9 @@
 package com.sun.training.employeemanagement.controller;
 
+import com.sun.training.employeemanagement.dto.DepartmentStatisticDto;
 import com.sun.training.employeemanagement.dto.EmployeeRequestDto;
 import com.sun.training.employeemanagement.dto.EmployeeResponseDto;
+import com.sun.training.employeemanagement.dto.EmployeeStatisticsDto;
 import com.sun.training.employeemanagement.service.EmployeeService;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -131,6 +133,42 @@ public class EmployeeController {
                 "timestamp", java.time.LocalDateTime.now().toString(),
                 "cachedTtl", "60s"
         ));
+    }
+
+    /**
+     * API to retrieve overall employee statistics and department breakdowns (Module 10).
+     *
+     * @return response entity containing overall statistics report
+     */
+    @GetMapping("/statistics")
+    public ResponseEntity<EmployeeStatisticsDto> getOverallStatistics() {
+        LOGGER.info("GET /api/v1/employees/statistics requested");
+        EmployeeStatisticsDto stats = employeeService.getOverallStatistics();
+        return ResponseEntity.ok(stats);
+    }
+
+    /**
+     * API to retrieve employee distribution statistics by department (Module 10).
+     *
+     * @return response entity containing list of department statistics
+     */
+    @GetMapping("/statistics/by-department")
+    public ResponseEntity<List<DepartmentStatisticDto>> getDepartmentStatistics() {
+        LOGGER.info("GET /api/v1/employees/statistics/by-department requested");
+        List<DepartmentStatisticDto> stats = employeeService.getDepartmentStatistics();
+        return ResponseEntity.ok(stats);
+    }
+
+    /**
+     * API to retrieve total employee count in the system (Module 10).
+     *
+     * @return response entity with total employees count
+     */
+    @GetMapping("/statistics/total")
+    public ResponseEntity<Map<String, Object>> getTotalEmployeesCount() {
+        LOGGER.info("GET /api/v1/employees/statistics/total requested");
+        long totalCount = employeeService.getTotalEmployeeCount();
+        return ResponseEntity.ok(Map.of("totalEmployees", totalCount));
     }
 
     /**

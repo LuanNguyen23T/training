@@ -1,5 +1,6 @@
 package com.sun.training.employeemanagement.repository;
 
+import com.sun.training.employeemanagement.dto.DepartmentStatisticDto;
 import com.sun.training.employeemanagement.entity.Employee;
 import java.util.List;
 import java.util.Optional;
@@ -91,4 +92,50 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
      * @param employeeCode unique employee code
      */
     void deleteByEmployeeCode(String employeeCode);
+
+    /**
+     * Counts total employees in the system using JPQL @Query (Module 10).
+     *
+     * @return total count of employees
+     */
+    @Query("SELECT COUNT(e) FROM Employee e")
+    long countTotalEmployees();
+
+    /**
+     * Aggregates employee count and average salary by department using JPQL @Query (Module 10).
+     *
+     * @return list of department statistics projection
+     */
+    @Query("SELECT new com.sun.training.employeemanagement.dto.DepartmentStatisticDto("
+            + "COALESCE(d.name, 'Chưa phân bổ'), "
+            + "COUNT(e), "
+            + "COALESCE(AVG(e.salary), 0.0)) "
+            + "FROM Employee e LEFT JOIN e.department d "
+            + "GROUP BY d.name "
+            + "ORDER BY COUNT(e) DESC")
+    List<DepartmentStatisticDto> countEmployeesByDepartment();
+
+    /**
+     * Calculates the average salary of all employees (Module 10).
+     *
+     * @return average salary, or 0.0 if no employees exist
+     */
+    @Query("SELECT COALESCE(AVG(e.salary), 0.0) FROM Employee e")
+    Double calculateAverageSalary();
+
+    /**
+     * Finds the highest salary among all employees (Module 10).
+     *
+     * @return maximum salary, or 0.0 if no employees exist
+     */
+    @Query("SELECT COALESCE(MAX(e.salary), 0.0) FROM Employee e")
+    Double findMaxSalary();
+
+    /**
+     * Finds the lowest salary among all employees (Module 10).
+     *
+     * @return minimum salary, or 0.0 if no employees exist
+     */
+    @Query("SELECT COALESCE(MIN(e.salary), 0.0) FROM Employee e")
+    Double findMinSalary();
 }
